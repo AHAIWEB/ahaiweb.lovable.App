@@ -60,19 +60,23 @@ const Library = () => {
       return;
     }
     if (!form.file || !form.title) {
-      toast.error("টাইটেল ও PDF ফাইল দিন");
+      toast.error("টাইটেল ও ফাইল দিন");
       return;
     }
-    if (form.file.type !== "application/pdf") {
-      toast.error("শুধু PDF ফাইল");
+    const name = form.file.name.toLowerCase();
+    const isPdf = form.file.type === "application/pdf" || name.endsWith(".pdf");
+    const isEpub = name.endsWith(".epub") || form.file.type === "application/epub+zip";
+    if (!isPdf && !isEpub) {
+      toast.error("শুধু PDF বা EPUB ফাইল");
       return;
     }
     setUploading(true);
     try {
       const path = `${user.id}/${Date.now()}-${form.file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-      const { error: upErr } = await supabase.storage.from("ebooks").upload(path, form.file);
+      const { error: upErr } = await supabase.storage.from("ebooks").upload(path, form.file, {
+        contentType: isEpub ? "application/epub+zip" : "application/pdf",
+      });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("ebooks").getPublicUrl(path);
       const { error: dbErr } = await supabase.from("ebooks").insert({
         user_id: user.id,
         title: form.title,
@@ -80,9 +84,10 @@ const Library = () => {
         description: form.description || null,
         category: form.category || null,
         is_public: form.is_public,
-        pdf_url: pub.publicUrl,
+        pdf_url: path,
+        file_path: path,
         file_size: form.file.size,
-      });
+      } as any);
       if (dbErr) throw dbErr;
       toast.success("আপলোড সফল");
       setOpen(false);
@@ -167,8 +172,8 @@ const Library = () => {
                     <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
                   </div>
                   <div>
-                    <Label>PDF ফাইল *</Label>
-                    <Input type="file" accept="application/pdf" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
+                    <Label>PDF বা EPUB ফাইল *</Label>
+                    <Input type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })} />
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch checked={form.is_public} onCheckedChange={(v) => setForm({ ...form, is_public: v })} />
