@@ -35,22 +35,49 @@ function normalize(s: string): string {
 
 function parseBangladict(html: string, url: string): ParsedWord[] {
   const results: ParsedWord[] = [];
-  // bangladict.net pages: word lists like <a href=".../word/XXXX">শব্দ</a> with meaning blocks
-  // Try common structure: entries inside <h2>WORD</h2> followed by meaning
-  const entryRegex =
-    /<h[2-4][^>]*>([^<]{1,80})<\/h[2-4]>[\s\S]{0,400}?(?:অর্থ|Meaning)[^:]*:?\s*([^<]{1,400})/gi;
-  let m;
-  while ((m = entryRegex.exec(html)) !== null) {
-    const word = stripHtml(m[1]);
-    const meaning = stripHtml(m[2]);
-    if (word && meaning && word.length < 60) {
-      results.push({
-        word,
-        meaning_bn: meaning,
-        source_url: url,
-        source_name: "bangladict.net",
-      });
+
+  // Primary: <div class="searchword"><h2 ...>WORD</h2></div>
+  let word = "";
+  const swMatch = html.match(/<div[^>]*class="searchword"[^>]*>\s*<h2[^>]*>([\s\S]*?)<\/h2>/i);
+  if (swMatch) word = stripHtml(swMatch[1]);
+
+  // Fallback: og:title -> "অভিধানে 'WORD' এর অর্থ"
+  if (!word) {
+    const ogTitle = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+    if (ogTitle) {
+      const t = ogTitle[1];
+      const m1 = t.match(/['"‘“]([^'"”’]+)['"”’]\s*এর অর্থ/);
+      if (m1) word = m1[1].trim();
+      else if (t.includes(" এর অর্থ")) word = t.split(" এর অর্থ")[0].replace(/.*?-\s*/, "").trim();
     }
+  }
+
+  // URL-decoded slug fallback
+  if (!word) {
+    try {
+      const slug = decodeURIComponent(new URL(url).pathname.replace(/^\/+|\/+$/g, ""));
+      if (slug && slug.length < 60 && !slug.includes("/")) word = slug;
+    } catch { /* ignore */ }
+  }
+
+  // Meanings: <div class="meaningsword">...comma separated links...</div>
+  let meaning = "";
+  const mwMatch = html.match(/<div[^>]*class="meaningsword"[^>]*>([\s\S]*?)<\/div>/i);
+  if (mwMatch) meaning = stripHtml(mwMatch[1]);
+
+  // Fallback: og:description
+  if (!meaning) {
+    const ogDesc = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
+    if (ogDesc) meaning = ogDesc[1].trim();
+  }
+
+  if (word && meaning && word.length < 80) {
+    results.push({
+      word,
+      meaning_bn: meaning,
+      source_url: url,
+      source_name: "bangladict.net",
+    });
   }
   return results;
 }
