@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type AuthUser = { id: string; email?: string };
+
 function strip(s: string) {
   return s.replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -28,6 +30,20 @@ async function fetchHtml(url: string): Promise<string> {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.text();
+}
+
+async function requireUser(req: Request, supabaseUrl: string, anonKey: string): Promise<AuthUser> {
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) throw new Error("authenticated session required");
+
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("invalid authenticated session");
+  const user = await res.json();
+  if (!user?.id) throw new Error("invalid authenticated session");
+  return { id: user.id, email: user.email };
 }
 
 function pick(html: string, re: RegExp): string | null {
@@ -120,10 +136,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const body = await req.json().catch(() => ({}));
     const urls: string[] = body.urls || [];
-    const userId: string | undefined = body.user_id;
+    const hasPostUrls = urls.some((rawUrl) => detectType(String(rawUrl || "").trim()) !== "bani-author");
+    const authUser = hasPostUrls ? await requireUser(req, supabaseUrl, anonKey) : null;
     if (!urls.length) {
       return new Response(JSON.stringify({ error: "urls[] required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -157,12 +175,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // posts route (wiki / generic) — needs user_id
-        if (!userId) { results.push({ url, type, ok: false, error: "user_id required for posts" }); continue; }
+        // posts route (wiki / generic) — ownership is derived only from the verified bearer token
+        if (!authUser) { results.push({ url, type, ok: false, error: "authenticated session required" }); continue; }
         const art = extractArticle(html, url);
         const slug = slugify(art.title) + "-" + Math.random().toString(36).slice(2, 6);
         const payload = {
-          user_id: userId,
+          user_id: authUser.id,
           title: art.title.slice(0, 250),
           slug,
           content: art.content,
@@ -187,10 +205,10 @@ Deno.serve(async (req) => {
               apikey: serviceKey, Authorization: `Bearer ${serviceKey}`,
               "Content-Type": "application/json", Prefer: "return=minimal",
             },
-            body: JSON.stringify({ title: payload.title, content: payload.content, excerpt: payload.excerpt, featured_image: payload.featured_image }),
+            body: JSON.stringify({ title: payload.title, content: payload.content, excerpt: payload.excerpt, featured_image: payload.featured_image, user_id: authUser.id }),
           });
           updated = upRes.ok;
-          results.push({ url, type, ok: upRes.ok, title: art.title, updated: true, error: upRes.ok ? null : await upRes.text() });
+          results.push({ url, type, ok: upRes.ok, title: art.title, owner_source: "auth", updated: true, error: upRes.ok ? null : await upRes.text() });
         } else {
           const insRes = await fetch(`${supabaseUrl}/rest/v1/posts`, {
             method: "POST",
@@ -201,7 +219,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify(payload),
           });
           inserted = insRes.ok;
-          results.push({ url, type, ok: insRes.ok, title: art.title, inserted: true, error: insRes.ok ? null : await insRes.text() });
+          results.push({ url, type, ok: insRes.ok, title: art.title, owner_source: "auth", inserted: true, error: insRes.ok ? null : await insRes.text() });
         }
       } catch (e) {
         results.push({ url, type, ok: false, error: (e as Error).message });
@@ -213,8 +231,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    const message = (e as Error).message;
     return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: message.includes("authenticated") || message.includes("session") ? 401 : 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
