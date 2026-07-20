@@ -23,6 +23,7 @@ import SiteCustomizer from "./pages/admin/SiteCustomizer";
 import ScraperHub from "./pages/admin/ScraperHub";
 import PostDetail from "./pages/PostDetail";
 import CardMaker from "./pages/CardMaker";
+import PhotoCardMaker from "./pages/PhotoCardMaker";
 import Dictionary from "./pages/Dictionary";
 import Library from "./pages/Library";
 import EbookReader from "./pages/EbookReader";
@@ -58,6 +59,7 @@ const App = () => (
             </Route>
             <Route path="/post/:slug" element={<PostDetail />} />
             <Route path="/card-maker" element={<CardMaker />} />
+            <Route path="/photo-card-maker" element={<PhotoCardMaker />} />
             <Route path="/dictionary" element={<Dictionary />} />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<EbookReader />} />

@@ -19,6 +19,7 @@ interface Category {
   sort_order: number | null;
   show_in_nav: boolean;
   parent_id: string | null;
+  external_url: string | null;
 }
 
 const CategoryManager = () => {
@@ -26,7 +27,7 @@ const CategoryManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", color: "#e11d48", sort_order: 0, parent_id: "" });
+  const [form, setForm] = useState({ name: "", slug: "", icon: "", color: "#e11d48", sort_order: 0, parent_id: "", external_url: "" });
 
   const fetchCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("sort_order", { ascending: true });
@@ -39,7 +40,7 @@ const CategoryManager = () => {
   const generateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-").replace(/[^\u0980-\u09FFa-z0-9-]/g, "");
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", icon: "", color: "#e11d48", sort_order: 0, parent_id: "" });
+    setForm({ name: "", slug: "", icon: "", color: "#e11d48", sort_order: 0, parent_id: "", external_url: "" });
     setEditingId(null);
   };
 
@@ -55,6 +56,7 @@ const CategoryManager = () => {
       color: form.color || null,
       sort_order: form.sort_order,
       parent_id: form.parent_id || null,
+      external_url: form.external_url || null,
     };
 
     if (editingId) {
@@ -79,6 +81,7 @@ const CategoryManager = () => {
       color: cat.color || "#e11d48",
       sort_order: cat.sort_order || 0,
       parent_id: cat.parent_id || "",
+      external_url: cat.external_url || "",
     });
   };
 
@@ -139,6 +142,7 @@ const CategoryManager = () => {
                   ))}
               </SelectContent>
             </Select>
+            <Input placeholder="ওয়েব লিংক (ঐচ্ছিক)" value={form.external_url} onChange={(e) => setForm((f) => ({ ...f, external_url: e.target.value }))} />
           </div>
           <div className="flex gap-2">
             <Button onClick={handleSave} className="gap-1.5">
@@ -205,6 +209,7 @@ const CategoryRow = ({ cat, onEdit, onDelete, onToggleNav, hasChildren, isChild 
       <div>
         <p className="text-sm font-medium">{cat.name}</p>
         <p className="text-xs text-muted-foreground">/{cat.slug}</p>
+        {cat.external_url && <p className="text-xs text-muted-foreground truncate max-w-[220px]">↗ {cat.external_url}</p>}
       </div>
       {cat.color && (
         <Badge variant="outline" className="text-xs" style={{ borderColor: cat.color, color: cat.color }}>
