@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Facebook, Twitter, Instagram, Linkedin, Youtube, Github } from "lucide-react";
+import { Loader2, Save, Upload, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, ShieldCheck, BadgeCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+
+type AppRole = "admin" | "moderator" | "editor" | "user";
 
 const ProfileEdit = () => {
   const { user } = useAuth();
@@ -16,6 +20,9 @@ const ProfileEdit = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<Record<string, AppRole>>({});
   const [profile, setProfile] = useState({
     display_name: "",
     bio: "",
@@ -59,6 +66,25 @@ const ProfileEdit = () => {
       });
   }, [user]);
 
+  const fetchAccess = async () => {
+    if (!user) return;
+    const { data: myRole } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin" as any).maybeSingle();
+    const admin = !!myRole;
+    setIsAdmin(admin);
+    if (!admin) return;
+
+    const [{ data: allProfiles }, { data: allRoles }] = await Promise.all([
+      supabase.from("profiles").select("id,user_id,display_name,avatar_url,website,is_verified,created_at").order("created_at", { ascending: false }),
+      supabase.from("user_roles").select("user_id,role"),
+    ]);
+    setProfiles((allProfiles as any[]) || []);
+    const nextRoles: Record<string, AppRole> = {};
+    ((allRoles as any[]) || []).forEach((r) => { nextRoles[r.user_id] = r.role as AppRole; });
+    setRoles(nextRoles);
+  };
+
+  useEffect(() => { fetchAccess(); }, [user]);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -86,6 +112,26 @@ const ProfileEdit = () => {
       toast({ title: "সফল", description: "প্রোফাইল আপডেট হয়েছে" });
     }
     setSaving(false);
+  };
+
+  const updateRole = async (targetUserId: string, role: AppRole) => {
+    if (targetUserId === user?.id) {
+      toast({ title: "নিজের রোল এখান থেকে বদলানো যাবে না", variant: "destructive" });
+      return;
+    }
+    const { error: delError } = await supabase.from("user_roles").delete().eq("user_id", targetUserId);
+    if (delError) { toast({ title: "ত্রুটি", description: delError.message, variant: "destructive" }); return; }
+    const { error } = await supabase.from("user_roles").insert({ user_id: targetUserId, role } as any);
+    if (error) { toast({ title: "ত্রুটি", description: error.message, variant: "destructive" }); return; }
+    setRoles((prev) => ({ ...prev, [targetUserId]: role }));
+    toast({ title: "অ্যাকসেস আপডেট হয়েছে" });
+  };
+
+  const updateVerified = async (targetUserId: string, verified: boolean) => {
+    const { error } = await supabase.from("profiles").update({ is_verified: verified } as any).eq("user_id", targetUserId);
+    if (error) { toast({ title: "ত্রুটি", description: error.message, variant: "destructive" }); return; }
+    setProfiles((prev) => prev.map((p) => p.user_id === targetUserId ? { ...p, is_verified: verified } : p));
+    toast({ title: verified ? "ভেরিফাইড করা হয়েছে" : "ভেরিফাইড সরানো হয়েছে" });
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -158,6 +204,44 @@ const ProfileEdit = () => {
           ))}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> অ্যাকসেস ও ভেরিফাইড</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {profiles.map((p) => (
+              <div key={p.user_id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={p.avatar_url || ""} />
+                  <AvatarFallback>{p.display_name?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate flex items-center gap-1">
+                    {p.display_name || "নাম নেই"}
+                    {p.is_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">{p.website || p.user_id}</p>
+                </div>
+                <Select value={roles[p.user_id] || "user"} onValueChange={(value) => updateRole(p.user_id, value as AppRole)} disabled={p.user_id === user?.id}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="moderator">Moderator</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">ভেরিফাইড</span>
+                  <Switch checked={!!p.is_verified} onCheckedChange={(v) => updateVerified(p.user_id, !!v)} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}

@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, UserCircle2, CalendarRange, Quote, Link2, Download, BookOpen } from "lucide-react";
+import { Loader2, UserCircle2, CalendarRange, Quote, Link2, Download, BookOpen, ImagePlus } from "lucide-react";
 import { generateBloggerTheme, generateBloggerAtomExport, downloadFile } from "@/lib/bloggerExport";
+import { Link } from "react-router-dom";
 
 const QUOTE_SOURCES = [
   { url: "https://www.bani.com.bd/", name: "bani.com.bd" },
@@ -73,7 +74,7 @@ export default function ScraperHub() {
     setSmartLog([]);
     try {
       const { data, error } = await supabase.functions.invoke("scrape-url", {
-        body: { urls, user_id: user?.id },
+        body: { urls },
       });
       if (error) throw error;
       setSmartLog(data.results || []);
@@ -170,12 +171,13 @@ export default function ScraperHub() {
       </div>
 
       <Tabs defaultValue="smart" className="w-full">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-7 w-full">
           <TabsTrigger value="smart"><Link2 className="h-4 w-4 mr-1" /> URL</TabsTrigger>
           <TabsTrigger value="people"><UserCircle2 className="h-4 w-4 mr-1" /> পিপল</TabsTrigger>
           <TabsTrigger value="events"><CalendarRange className="h-4 w-4 mr-1" /> এই দিনে</TabsTrigger>
           <TabsTrigger value="quotes"><Quote className="h-4 w-4 mr-1" /> উক্তি</TabsTrigger>
           <TabsTrigger value="dict"><BookOpen className="h-4 w-4 mr-1" /> অভিধান</TabsTrigger>
+          <TabsTrigger value="photo"><ImagePlus className="h-4 w-4 mr-1" /> ফটোকার্ড</TabsTrigger>
           <TabsTrigger value="blogger"><Download className="h-4 w-4 mr-1" /> Blogger</TabsTrigger>
         </TabsList>
 
@@ -345,6 +347,22 @@ export default function ScraperHub() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="photo">
+          <Card>
+            <CardHeader>
+              <CardTitle>শুভ সকাল ফটোকার্ড মেকার</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                ১:১ ও ৪:৫ কার্ড, কাস্টম লোগো, হেডার, ফুটার, ব্যাকগ্রাউন্ড এবং দিনপঞ্জি অটো-ফেচ।
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link to="/photo-card-maker"><ImagePlus className="h-4 w-4 mr-1" /> ফটোকার্ড মেকার খুলুন</Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

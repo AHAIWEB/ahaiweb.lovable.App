@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, FileText, PlusCircle, Link2, Image, LogOut, Home, Menu, X, Tag, User, FolderOpen, Rss, Settings2, Bug,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { label: "ড্যাশবোর্ড", icon: LayoutDashboard, path: "/admin" },
@@ -25,8 +26,24 @@ const AdminLayout = () => {
   const { user, loading, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) { setRoleLoading(false); return; }
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ["admin", "moderator", "editor"] as any)
+      .limit(1)
+      .then(({ data }) => {
+        setCanAccessAdmin(!!data?.length);
+        setRoleLoading(false);
+      });
+  }, [user]);
+
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground">লোড হচ্ছে...</p>
@@ -35,6 +52,7 @@ const AdminLayout = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (!canAccessAdmin) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen flex bg-background">
