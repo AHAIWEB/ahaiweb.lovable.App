@@ -12,6 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 type Ratio = "1:1" | "4:5";
+type Template = "sunrise" | "midnight" | "emerald" | "sunset";
+
+const templates: Record<Template, { label: string; bg: string; accent: string }> = {
+  sunrise: { label: "সূর্যোদয়", bg: "linear-gradient(160deg,#f97316,#f43f5e 48%,#a21caf)", accent: "#fff7ed" },
+  midnight: { label: "মিডনাইট", bg: "linear-gradient(160deg,#0f172a,#1e3a8a 48%,#312e81)", accent: "#c7d2fe" },
+  emerald: { label: "প্রকৃতি", bg: "linear-gradient(160deg,#065f46,#059669 48%,#84cc16)", accent: "#ecfccb" },
+  sunset: { label: "গোধূলি", bg: "linear-gradient(160deg,#7c2d12,#c2410c 48%,#eab308)", accent: "#fef3c7" },
+};
 
 const defaultPrayers = {
   fajr: "—:—",
