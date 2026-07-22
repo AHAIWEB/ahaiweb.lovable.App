@@ -183,7 +183,7 @@ export default function PhotoCardMaker() {
         </Card>
 
         <div className="flex min-h-[720px] items-start justify-center rounded-lg border border-border bg-muted/40 p-4 md:p-8">
-          <div ref={cardRef} className={`relative w-full overflow-hidden rounded-lg text-primary-foreground shadow-[var(--shadow-elevated)] ${cardSize}`} style={bgStyle}>
+          <div ref={cardRef} className={`relative w-full overflow-hidden rounded-lg shadow-[var(--shadow-elevated)] ${cardSize}`} style={bgStyle}>
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, hsl(var(--primary-foreground) / 0.35) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
             <div className="relative flex h-full flex-col p-7 md:p-9">
               <header className="flex items-center justify-between border-b border-primary-foreground/25 pb-4">
