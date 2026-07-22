@@ -12,6 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 type Ratio = "1:1" | "4:5";
+type Template = "sunrise" | "midnight" | "emerald" | "sunset";
+
+const templates: Record<Template, { label: string; bg: string; accent: string }> = {
+  sunrise: { label: "সূর্যোদয়", bg: "linear-gradient(160deg,#f97316,#f43f5e 48%,#a21caf)", accent: "#fff7ed" },
+  midnight: { label: "মিডনাইট", bg: "linear-gradient(160deg,#0f172a,#1e3a8a 48%,#312e81)", accent: "#c7d2fe" },
+  emerald: { label: "প্রকৃতি", bg: "linear-gradient(160deg,#065f46,#059669 48%,#84cc16)", accent: "#ecfccb" },
+  sunset: { label: "গোধূলি", bg: "linear-gradient(160deg,#7c2d12,#c2410c 48%,#eab308)", accent: "#fef3c7" },
+};
 
 const defaultPrayers = {
   fajr: "—:—",
@@ -24,6 +32,7 @@ const defaultPrayers = {
 export default function PhotoCardMaker() {
   const cardRef = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState<Ratio>("4:5");
+  const [template, setTemplate] = useState<Template>("sunrise");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [title, setTitle] = useState("শুভ সকাল");
   const [logo, setLogo] = useState("AHAiWEB");
@@ -49,11 +58,12 @@ export default function PhotoCardMaker() {
 
   const bgStyle = useMemo(() => ({
     backgroundImage: background
-      ? `linear-gradient(hsl(var(--foreground) / 0.54), hsl(var(--foreground) / 0.64)), url(${background})`
-      : "linear-gradient(160deg, hsl(var(--primary) / 0.95), hsl(var(--secondary) / 0.94) 48%, hsl(var(--accent) / 0.9))",
+      ? `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)), url(${background})`
+      : templates[template].bg,
     backgroundSize: "cover",
     backgroundPosition: "center",
-  }), [background]);
+    color: templates[template].accent,
+  }), [background, template]);
 
   const fetchCalendar = async () => {
     setLoadingCalendar(true);
@@ -110,6 +120,24 @@ export default function PhotoCardMaker() {
             </div>
 
             <div className="space-y-2">
+              <Label>টেমপ্লেট</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(Object.keys(templates) as Template[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTemplate(t)}
+                    className={`h-14 rounded-md border-2 text-[10px] font-semibold text-white transition ${template === t ? "border-primary ring-2 ring-primary/40" : "border-transparent"}`}
+                    style={{ backgroundImage: templates[t].bg, backgroundSize: "cover" }}
+                    title={templates[t].label}
+                  >
+                    {templates[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>তারিখ</Label>
               <div className="flex gap-2">
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -155,7 +183,7 @@ export default function PhotoCardMaker() {
         </Card>
 
         <div className="flex min-h-[720px] items-start justify-center rounded-lg border border-border bg-muted/40 p-4 md:p-8">
-          <div ref={cardRef} className={`relative w-full overflow-hidden rounded-lg text-primary-foreground shadow-[var(--shadow-elevated)] ${cardSize}`} style={bgStyle}>
+          <div ref={cardRef} className={`relative w-full overflow-hidden rounded-lg shadow-[var(--shadow-elevated)] ${cardSize}`} style={bgStyle}>
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, hsl(var(--primary-foreground) / 0.35) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
             <div className="relative flex h-full flex-col p-7 md:p-9">
               <header className="flex items-center justify-between border-b border-primary-foreground/25 pb-4">

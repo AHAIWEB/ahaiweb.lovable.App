@@ -37,6 +37,14 @@ const Header = () => {
     },
   });
 
+  const { data: branding } = useQuery({
+    queryKey: ["site-branding"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle();
+      return (data?.value as any) || {};
+    },
+  });
+
   // Build parent-child hierarchy
   const parentCategories = allCategories?.filter((c: any) => !c.parent_id) || [];
   const getChildren = (parentId: string) => allCategories?.filter((c: any) => c.parent_id === parentId) || [];
@@ -61,7 +69,7 @@ const Header = () => {
   const selectedHoroscope = horoscope?.signs?.find((s: any) => s.name === selectedSign);
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border" style={branding?.header_bg ? { backgroundImage: `linear-gradient(hsl(var(--card) / 0.9), hsl(var(--card) / 0.9)), url(${branding.header_bg})`, backgroundSize: "cover" } : undefined}>
       {/* Ticker */}
       <div className="ticker-bar flex items-center gap-3 overflow-hidden">
         <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded text-xs font-bold shrink-0">
@@ -78,10 +86,15 @@ const Header = () => {
           <Button variant="ghost" size="icon" className="md:hidden">
             <Menu className="h-5 w-5" />
           </Button>
-          <Link to="/" className="text-2xl md:text-3xl font-display font-black tracking-tight">
-            <span className="text-primary">AHAi</span>
-            <span className="text-foreground">WEB</span>
+          <Link to="/" className="flex items-center gap-2 text-2xl md:text-3xl font-display font-black tracking-tight">
+            {branding?.logo_url ? (
+              <img src={branding.logo_url} alt="Logo" className="h-8 md:h-10 w-auto" />
+            ) : (<>
+              <span className="text-primary">AHAi</span>
+              <span className="text-foreground">WEB</span>
+            </>)}
           </Link>
+
         </div>
 
         <div className="hidden md:flex flex-1 max-w-md">

@@ -45,18 +45,30 @@ const SiteCustomizer = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeZone, setActiveZone] = useState("main");
   const [newSection, setNewSection] = useState({ label: "", icon: "", section_key: "", type: "content" });
+  const [branding, setBranding] = useState<{ logo_url: string; header_bg: string; footer_bg: string; footer_text: string }>({ logo_url: "", header_bg: "", footer_bg: "", footer_text: "© AHAiWEB" });
+  const [savingBranding, setSavingBranding] = useState(false);
 
   const fetchData = async () => {
-    const [sectionsRes, catsRes] = await Promise.all([
+    const [sectionsRes, catsRes, brandRes] = await Promise.all([
       supabase.from("site_sections").select("*").order("sort_order"),
       supabase.from("categories").select("id, name, slug, icon, color").order("sort_order"),
+      supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
     ]);
     setSections((sectionsRes.data as any as SiteSection[]) || []);
     setCategories(catsRes.data || []);
+    if (brandRes.data?.value) setBranding({ logo_url: "", header_bg: "", footer_bg: "", footer_text: "© AHAiWEB", ...(brandRes.data.value as any) });
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const saveBranding = async () => {
+    setSavingBranding(true);
+    const { error } = await supabase.from("site_settings").upsert({ key: "branding", value: branding as any } as any, { onConflict: "key" });
+    setSavingBranding(false);
+    if (error) toast({ title: "ত্রুটি", description: error.message, variant: "destructive" });
+    else toast({ title: "ব্র্যান্ডিং সেভ হয়েছে" });
+  };
 
   const zoneSections = sections.filter((s) => (s.zone || "main") === activeZone);
 
@@ -168,6 +180,35 @@ const SiteCustomizer = () => {
           {sections.filter((s) => s.is_visible).length}/{sections.length} সক্রিয়
         </Badge>
       </div>
+
+      {/* Branding */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">🎨 ব্র্যান্ডিং (হেডার/ফুটার লোগো ও ব্যাকগ্রাউন্ড)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">লোগো URL</label>
+              <Input value={branding.logo_url} onChange={(e) => setBranding((b) => ({ ...b, logo_url: e.target.value }))} placeholder="https://.../logo.png" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">ফুটার টেক্সট</label>
+              <Input value={branding.footer_text} onChange={(e) => setBranding((b) => ({ ...b, footer_text: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">হেডার ব্যাকগ্রাউন্ড URL</label>
+              <Input value={branding.header_bg} onChange={(e) => setBranding((b) => ({ ...b, header_bg: e.target.value }))} placeholder="https://.../bg.jpg" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">ফুটার ব্যাকগ্রাউন্ড URL</label>
+              <Input value={branding.footer_bg} onChange={(e) => setBranding((b) => ({ ...b, footer_bg: e.target.value }))} placeholder="https://.../bg.jpg" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {branding.logo_url && <img src={branding.logo_url} alt="logo preview" className="h-10" />}
+            <Button size="sm" onClick={saveBranding} disabled={savingBranding}>{savingBranding ? "সেভ হচ্ছে..." : "ব্র্যান্ডিং সেভ"}</Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Zone Tabs */}
       <Tabs value={activeZone} onValueChange={setActiveZone}>
