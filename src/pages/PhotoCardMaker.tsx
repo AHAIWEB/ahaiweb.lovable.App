@@ -32,6 +32,7 @@ const defaultPrayers = {
 export default function PhotoCardMaker() {
   const cardRef = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState<Ratio>("4:5");
+  const [template, setTemplate] = useState<Template>("sunrise");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [title, setTitle] = useState("শুভ সকাল");
   const [logo, setLogo] = useState("AHAiWEB");
