@@ -181,6 +181,35 @@ const SiteCustomizer = () => {
         </Badge>
       </div>
 
+      {/* Branding */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-base">🎨 ব্র্যান্ডিং (হেডার/ফুটার লোগো ও ব্যাকগ্রাউন্ড)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">লোগো URL</label>
+              <Input value={branding.logo_url} onChange={(e) => setBranding((b) => ({ ...b, logo_url: e.target.value }))} placeholder="https://.../logo.png" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">ফুটার টেক্সট</label>
+              <Input value={branding.footer_text} onChange={(e) => setBranding((b) => ({ ...b, footer_text: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">হেডার ব্যাকগ্রাউন্ড URL</label>
+              <Input value={branding.header_bg} onChange={(e) => setBranding((b) => ({ ...b, header_bg: e.target.value }))} placeholder="https://.../bg.jpg" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">ফুটার ব্যাকগ্রাউন্ড URL</label>
+              <Input value={branding.footer_bg} onChange={(e) => setBranding((b) => ({ ...b, footer_bg: e.target.value }))} placeholder="https://.../bg.jpg" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {branding.logo_url && <img src={branding.logo_url} alt="logo preview" className="h-10" />}
+            <Button size="sm" onClick={saveBranding} disabled={savingBranding}>{savingBranding ? "সেভ হচ্ছে..." : "ব্র্যান্ডিং সেভ"}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Zone Tabs */}
       <Tabs value={activeZone} onValueChange={setActiveZone}>
         <TabsList className="w-full grid grid-cols-3">
