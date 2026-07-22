@@ -37,6 +37,14 @@ const Header = () => {
     },
   });
 
+  const { data: branding } = useQuery({
+    queryKey: ["site-branding"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle();
+      return (data?.value as any) || {};
+    },
+  });
+
   // Build parent-child hierarchy
   const parentCategories = allCategories?.filter((c: any) => !c.parent_id) || [];
   const getChildren = (parentId: string) => allCategories?.filter((c: any) => c.parent_id === parentId) || [];
