@@ -120,6 +120,24 @@ export default function PhotoCardMaker() {
             </div>
 
             <div className="space-y-2">
+              <Label>টেমপ্লেট</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(Object.keys(templates) as Template[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTemplate(t)}
+                    className={`h-14 rounded-md border-2 text-[10px] font-semibold text-white transition ${template === t ? "border-primary ring-2 ring-primary/40" : "border-transparent"}`}
+                    style={{ backgroundImage: templates[t].bg, backgroundSize: "cover" }}
+                    title={templates[t].label}
+                  >
+                    {templates[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>তারিখ</Label>
               <div className="flex gap-2">
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
