@@ -58,11 +58,12 @@ export default function PhotoCardMaker() {
 
   const bgStyle = useMemo(() => ({
     backgroundImage: background
-      ? `linear-gradient(hsl(var(--foreground) / 0.54), hsl(var(--foreground) / 0.64)), url(${background})`
-      : "linear-gradient(160deg, hsl(var(--primary) / 0.95), hsl(var(--secondary) / 0.94) 48%, hsl(var(--accent) / 0.9))",
+      ? `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)), url(${background})`
+      : templates[template].bg,
     backgroundSize: "cover",
     backgroundPosition: "center",
-  }), [background]);
+    color: templates[template].accent,
+  }), [background, template]);
 
   const fetchCalendar = async () => {
     setLoadingCalendar(true);
