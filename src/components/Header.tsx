@@ -1,4 +1,4 @@
-import { Search, Bell, Moon, Sun, Menu, Settings, LogIn, Home, CalendarDays, Star, Quote, ChevronDown, BookOpen, Library as LibraryIcon } from "lucide-react";
+import { Search, Bell, Moon, Sun, Menu, Settings, LogIn, Home, CalendarDays, Star, Quote, ChevronDown, BookOpen, Library as LibraryIcon, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -37,6 +37,14 @@ const Header = () => {
     },
   });
 
+  const { data: branding } = useQuery({
+    queryKey: ["site-branding"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle();
+      return (data?.value as any) || {};
+    },
+  });
+
   // Build parent-child hierarchy
   const parentCategories = allCategories?.filter((c: any) => !c.parent_id) || [];
   const getChildren = (parentId: string) => allCategories?.filter((c: any) => c.parent_id === parentId) || [];
@@ -61,7 +69,7 @@ const Header = () => {
   const selectedHoroscope = horoscope?.signs?.find((s: any) => s.name === selectedSign);
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border" style={branding?.header_bg ? { backgroundImage: `linear-gradient(hsl(var(--card) / 0.9), hsl(var(--card) / 0.9)), url(${branding.header_bg})`, backgroundSize: "cover" } : undefined}>
       {/* Ticker */}
       <div className="ticker-bar flex items-center gap-3 overflow-hidden">
         <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded text-xs font-bold shrink-0">
@@ -78,10 +86,15 @@ const Header = () => {
           <Button variant="ghost" size="icon" className="md:hidden">
             <Menu className="h-5 w-5" />
           </Button>
-          <Link to="/" className="text-2xl md:text-3xl font-display font-black tracking-tight">
-            <span className="text-primary">AHAi</span>
-            <span className="text-foreground">WEB</span>
+          <Link to="/" className="flex items-center gap-2 text-2xl md:text-3xl font-display font-black tracking-tight">
+            {branding?.logo_url ? (
+              <img src={branding.logo_url} alt="Logo" className="h-8 md:h-10 w-auto" />
+            ) : (<>
+              <span className="text-primary">AHAi</span>
+              <span className="text-foreground">WEB</span>
+            </>)}
           </Link>
+
         </div>
 
         <div className="hidden md:flex flex-1 max-w-md">
@@ -129,37 +142,70 @@ const Header = () => {
             const children = getChildren(cat.id);
             if (children.length > 0) {
               return (
-                <Popover key={cat.id}>
-                  <PopoverTrigger asChild>
+                <div key={cat.id} className="group relative shrink-0">
+                  {cat.external_url ? (
                     <Button
                       variant={activeCategory === cat.slug ? "default" : "ghost"}
                       size="sm"
-                      className="shrink-0 h-7 text-xs rounded-full gap-1"
+                      className="h-7 text-xs rounded-full gap-1"
+                      asChild
+                    >
+                      <a href={cat.external_url} target="_blank" rel="noreferrer">
+                        {cat.icon} {cat.name} <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={activeCategory === cat.slug ? "default" : "ghost"}
+                      size="sm"
+                      className="h-7 text-xs rounded-full gap-1"
+                      onClick={() => setSearchParams({ category: cat.slug })}
                     >
                       {cat.icon} {cat.name} <ChevronDown className="h-3 w-3" />
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-[min(560px,90vw)] p-3">
+                  )}
+                  <div className="pointer-events-none invisible absolute left-0 top-full z-50 w-[min(560px,90vw)] translate-y-2 rounded-md border border-border bg-popover p-3 text-popover-foreground opacity-0 shadow-md transition-all group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-1 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-1 group-focus-within:opacity-100">
                     <button
                       className="w-full text-left mb-2 px-2 py-1 rounded hover:bg-muted text-xs font-bold"
                       onClick={() => setSearchParams({ category: cat.slug })}
                     >
                       সব {cat.name} →
                     </button>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-[60vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-[70vh] overflow-y-auto">
                       {children.map((child: any) => (
-                        <button
-                          key={child.id}
-                          className="text-left px-2 py-1.5 text-xs hover:bg-muted rounded transition-colors flex items-center gap-2"
-                          onClick={() => setSearchParams({ category: child.slug })}
-                        >
-                          {child.icon && <span>{child.icon}</span>}
-                          <span className="truncate">{child.name}</span>
-                        </button>
+                        child.external_url ? (
+                          <a
+                            key={child.id}
+                            href={child.external_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-left px-2 py-1.5 text-xs hover:bg-muted rounded transition-colors flex items-center gap-2"
+                          >
+                            {child.icon && <span>{child.icon}</span>}
+                            <span className="truncate">{child.name}</span>
+                            <ExternalLink className="h-3 w-3 ml-auto" />
+                          </a>
+                        ) : (
+                          <button
+                            key={child.id}
+                            className="text-left px-2 py-1.5 text-xs hover:bg-muted rounded transition-colors flex items-center gap-2"
+                            onClick={() => setSearchParams({ category: child.slug })}
+                          >
+                            {child.icon && <span>{child.icon}</span>}
+                            <span className="truncate">{child.name}</span>
+                          </button>
+                        )
                       ))}
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                </div>
+              );
+            }
+            if (cat.external_url) {
+              return (
+                <Button key={cat.id} variant="ghost" size="sm" className="shrink-0 h-7 text-xs rounded-full gap-1" asChild>
+                  <a href={cat.external_url} target="_blank" rel="noreferrer">{cat.icon} {cat.name} <ExternalLink className="h-3 w-3" /></a>
+                </Button>
               );
             }
             return (
